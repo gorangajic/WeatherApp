@@ -29,10 +29,23 @@ class App extends React.Component {
     };
   }
 
+  componentDidMount() {
+    AsyncStorage.getItem('city').then((city) => {
+      if (!city) {
+        this.dohvatiVreme();
+        return;
+      }
+      this.setState({ city }, () => {
+        this.dohvatiVreme();
+      });
+    })
+  }
+
   dohvatiVreme() {
 
     // postavljanje loading flaga na true
     this.setState({ loading: true });
+    AsyncStorage.setItem('city', this.state.city);
     // saljemo zahtev ka API-u
     fetch(`${BASE_URL}&q=${this.state.city}`)
       .then((res) => res.json())

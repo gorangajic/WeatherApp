@@ -14,7 +14,7 @@ import FromNow from '../components/FromNow';
 import Icon from '../components/Icon';
 
 const APP_ID = 'f4b157a7c1cbcf427f66fb113ee9be8e';
-const BASE_URL = 'http://api.openweathermap.org/data/2.5/weather?units=metric&mode=json&APPID=' + APP_ID;
+const BASE_URL = 'http://api.openweathermap.org/data/2.5/weather?mode=json&APPID=' + APP_ID;
 
 // Za domaci sacuvati stanje putem AsyncStorage
 // https://facebook.github.io/react-native/docs/asyncstorage
@@ -26,16 +26,43 @@ class App extends React.Component {
       city: 'Indjija',
       weather: null,
       loading: false,
+      unit: 'metric',
     };
   }
 
   componentDidMount() {
-    AsyncStorage.getItem('city').then((city) => {
-      if (!city) {
+    this.didFocus = this.props.navigation.addListener('didFocus', () => {
+      this.dohvatiVremeStorage();
+    });
+  }
+
+  componentWillUnmount() {
+    this.didFocus.remove();
+  }
+
+  dohvatiVremeStorage() {
+
+    Promise.all([
+      AsyncStorage.getItem('city'),
+      AsyncStorage.getItem('unit'),
+    ])
+    .then((states) => {
+      const city = states[0];
+      const unit = states[1];
+      console.log(states);
+
+      if (!city && !unit) {
         this.dohvatiVreme();
         return;
       }
-      this.setState({ city }, () => {
+      const newState = {};
+      if (city) {
+        newState.city = city;
+      }
+      if (unit) {
+        newState.unit = unit;
+      }
+      this.setState(newState, () => {
         this.dohvatiVreme();
       });
     })
@@ -47,12 +74,12 @@ class App extends React.Component {
     this.setState({ loading: true });
     AsyncStorage.setItem('city', this.state.city);
     // saljemo zahtev ka API-u
-    fetch(`${BASE_URL}&q=${this.state.city}`)
+    fetch(`${BASE_URL}&q=${this.state.city}&units=${this.state.unit}`)
       .then((res) => res.json())
       .then(result => {
         // poziva se ova funkcija
         // u kojoj obradjujemo zahtev
-
+        console.log(result);
         // ako temperatura nije pronadjena prikazujemo gresku sa servera
         // ili Something went wrong
         if (!result.main || typeof result.main.temp === 'undefined') {
@@ -106,7 +133,9 @@ class App extends React.Component {
           <Icon size="large" icon={this.state.weather.icon} />
           <Text style={styles.name}>{this.state.weather.city}</Text>
           <Text style={styles.type}>{this.state.weather.status}</Text>
-          <Text style={styles.temp}>{this.state.weather.temp} °C</Text>
+          <Text style={styles.temp}>
+            {this.state.weather.temp} {this.state.unit === 'metric' ? '°C' : '°F'}
+          </Text>
         </View>
     }
 
